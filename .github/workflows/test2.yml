@@ -1,0 +1,71 @@
+name: Auto Release on Push to Main
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  release:
+    runs-on: ubuntu-latest  # This job runs on Ubuntu
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      # Optional: Step to generate the zip file
+      - name: Generate zip file
+        run: |
+          mkdir -p output
+          echo "Sample content" > output/sample.txt
+          zip -r filename.zip output/
+      - name: Generate Version Tag
+        id: generate_tag
+        run: |
+          VERSION="v$(date +'%Y.%m.%d-%H%M%S')"
+          echo "version=$VERSION" >> $GITHUB_ENV
+      - name: Create Git Tag
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ env.version }}
+          git push origin ${{ env.version }}
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.version }}
+          release_name: "Release ${{ env.version }}"
+          body: "Automatic release for version ${{ env.version }}"
+          draft: false
+          prerelease: false
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./filename.zip  # Ensure this path is correct
+          asset_name: filename.zip
+          asset_content_type: application/zip
+      # Upload the artifact for future download
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: my-artifact
+          path: ./filename.zip  # Ensure this is the correct path to the file you want to upload
+      - name: List files in the current directory
+        run: ls -l
+  download:
+    runs-on: ubuntu-latest
+    needs: release  # Ensure this job runs only after the release job is finished
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: my-artifact
+          path: ./downloaded_files  # Specify the local directory to save the file
+      - name: List files in the downloaded directory
+        run: ls -l ./downloaded_files

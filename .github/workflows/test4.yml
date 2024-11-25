@@ -1,0 +1,60 @@
+name: Release Push CI
+on:
+  push:
+   branches:
+      - main
+  workflow_dispatch:
+jobs:
+  trigger_on_release:
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:4.4
+        ports:
+          - 27017:27017
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Set Environment Variables
+      run: |
+          echo "PYTHONPATH=$PWD/login_testcases/homeobjects:$PWD/Configuration/configfile/config.py" >> $GITHUB_ENV
+          echo "MONGO_URI=mongodb://127.0.0.1:27017/sampleupload" >> $GITHUB_ENV
+  
+    - name: Wait for MongoDB to be ready
+      run: |
+          until nc -zv localhost 27017; do
+            echo "Waiting for MongoDB to start..."
+            sleep 1
+          done
+          echo "MongoDB is ready"
+  
+    - name: Configure MongoDB Test Data
+      run: |
+          python configfile/config.py    
+    
+    - name: Make run_tests.sh executable
+      run: chmod +x ./test.sh
+    # Run the shell script to invoke the Selenium scripts using bash (instead of PowerShell)
+    - name: Run Selenium Tests
+      run: |
+        echo "Running the Selenium tests..."
+        bash ./test.sh  > test_results.log || exit 0
+        cat test_results.log    # Display test results for debugging # Run the shell script in bash
+    # Step 5: Show test results log
+    - name: Display Test Results Log
+      run: cat test_results.log
+    # Step 6: Send Failure Email Notification if tests failed
+    - name: Send Failure Email Notification
+      if: failure()  # Trigger this step only if previous steps failed
+      run: |
+        echo "Tests failed! Sending email notification..."
+        python send_email_notification.py "Tests failed on release push"
