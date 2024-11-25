@@ -3,7 +3,7 @@ echo "Starting Selenium Tests..."
 # Detect operating system
 if [[ "$OSTYPE" == "linux-gnu"* || "$OSTYPE" == "darwin"* ]]; then
     # Unix-based paths (e.g., GitHub Actions)
-    script_path="/home/runner/work/Config/config"
+    script_path="/home/runner/work/Config/Config"
 elif [[ "$OSTYPE" == "msys"* || "$OSTYPE" == "win32"* ]]; then
     # Windows-based paths
     script_path="C:/Users/shinba/Config"
