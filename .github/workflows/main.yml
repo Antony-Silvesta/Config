@@ -36,7 +36,7 @@ jobs:
 
     - name: Set Environment Variables
       run: |
-        echo "PYTHONPATH=$PWD/login_testcases/homeobjects:$PWD/Configuration/configfile/config.py" >> $GITHUB_ENV
+        echo "PYTHONPATH=$PWD/login_testcases/homeobjects:$PWD/Config/configfile/config.py" >> $GITHUB_ENV
         echo "MONGO_URI=mongodb://127.0.0.1:27017/sampleupload" >> $GITHUB_ENV
 
     - name: Wait for MongoDB to be ready
@@ -107,11 +107,11 @@ jobs:
 
     - name: Send Email Notification
       run: |
-          if [ "${{ steps.test_run.outcome }}" == "success or failure" ]; then
-            python send_email_notification.py success
-          else
-            python send_email_notification.py failure
-          fi
+       if [ "${{ steps.test_run.outcome }}" == "failure" ]; then
+        python send_email_notification.py failure
+       fi
+
+ 
       env:
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}  # Store sender email in GitHub secrets
           SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}  # Store sender password in GitHub secrets

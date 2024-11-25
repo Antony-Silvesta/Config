@@ -3,10 +3,10 @@ echo "Starting Selenium Tests..."
 # Detect operating system
 if [[ "$OSTYPE" == "linux-gnu"* || "$OSTYPE" == "darwin"* ]]; then
     # Unix-based paths (e.g., GitHub Actions)
-    script_path="/home/runner/work/Configuration/configuration"
+    script_path="/home/runner/work/Config/config"
 elif [[ "$OSTYPE" == "msys"* || "$OSTYPE" == "win32"* ]]; then
     # Windows-based paths
-    script_path="C:/Users/shinba/Configuration"
+    script_path="C:/Users/shinba/Config"
 else
     echo "Unsupported OS type: $OSTYPE"
     exit 1
