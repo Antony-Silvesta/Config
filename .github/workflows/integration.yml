@@ -14,6 +14,16 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
+    - name: Install MongoDB Shell (mongosh)
+      run: |
+        # Add MongoDB's official GPG key and repository to the package manager
+        wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo tee /etc/apt/trusted.gpg.d/mongodb.asc
+        echo "deb https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+
+        # Update package lists and install mongosh
+        sudo apt-get update
+        sudo apt-get install -y mongodb-mongosh
+
     - name: Set up MongoDB connection
       run: |
         # Save the MongoDB URI as a GitHub secret or directly here
@@ -29,9 +39,10 @@ jobs:
         # Optionally, you can run another query or check for specific collections
         mongosh $MONGO_URI --eval 'printjson(db.sampletest.find().limit(1).toArray())'
 
-        - name: Set up ChromeDriver and Chrome
-        uses: browser-actions/setup-chrome@v1
-        with:
+
+    - name: Set up ChromeDriver and Chrome
+      uses: browser-actions/setup-chrome@v1
+      with:
           chrome-version: 'latest'
   
     - name: Set Timezone to India Standard Time (IST)
