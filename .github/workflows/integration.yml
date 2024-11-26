@@ -1,31 +1,85 @@
-name: MongoDB Integration
+name: MongoDB Atlas Integration Workflow
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  update-mongo:
+  connect-and-query-mongo:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-    - name: Update MongoDB
-      env:
-        MONGO_URI: ${{ secrets.MONGO_URI }}
+    - name: Set up MongoDB connection
       run: |
-        npm install mongodb
-        node -e "
-        const { MongoClient } = require('mongodb');
-        (async () => {
-          const client = new MongoClient(process.env.MONGO_URI);
-          await client.connect();
-          const db = client.db('sampleupload');
-          const collection = db.collection('users');
-          await collection.insertOne({ message: 'GitHub Integration Test' });
-          await client.close();
-        })();
-        "
+        # Save the MongoDB URI as a GitHub secret or directly here
+        MONGO_URI="mongodb+srv://dbUser:P@ssw0rd123@cluster0.jdala.mongodb.net/sampletest?retryWrites=true&w=majority"
+
+    - name: Connect to MongoDB and run query
+      run: |
+        # Connect to MongoDB and list all collections in the 'sampletest' database
+        mongosh $MONGO_URI --eval 'printjson(db.getCollectionNames())'
+
+    - name: Verify connection and query result
+      run: |
+        # Optionally, you can run another query or check for specific collections
+        mongosh $MONGO_URI --eval 'printjson(db.sampletest.find().limit(1).toArray())'
+
+        - name: Set up ChromeDriver and Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: 'latest'
+  
+    - name: Set Timezone to India Standard Time (IST)
+      run: sudo timedatectl set-timezone Asia/Kolkata
+  
+    - name: Run Selenium tests and generate HTML report
+      id: run_tests
+      run: |
+          pytest --html=report.html --self-contained-html > pytest_test_results.log || exit 0
+          cat pytest_test_results.log
+  
+    - name: Check if tests passed or failed
+      run: |
+          if grep -q "FAILED" pytest_test_results.log; then
+            echo "Tests failed"
+            echo "TESTS_PASSED=false" >> $GITHUB_ENV
+          else
+            echo "Tests passed"
+            echo "TESTS_PASSED=true" >> $GITHUB_ENV
+          fi
+  
+    - name: Archive Pytest Results
+      uses: actions/upload-artifact@v3
+      with:
+          name: pytest-results
+          path: pytest_test_results.log
+  
+    - name: Archive HTML Test Report
+      uses: actions/upload-artifact@v3
+      with:
+          name: selenium-test-report
+          path: report.html
+  
+    - name: Archive Pytest Results (with check)
+      run: |
+          if [ -f "pytest_test_results.log" ]; then
+            echo "Pytest results archived"
+          else
+            echo "Failed to archive Pytest results"
+            exit 1
+          fi
+  
+    - name: Archive HTML Test Report (with check)
+      run: |
+          if [ -f "report.html" ]; then
+            echo "HTML test report archived"
+          else
+            echo "Failed to archive HTML test report"
+            exit 1
+          fi
+  
