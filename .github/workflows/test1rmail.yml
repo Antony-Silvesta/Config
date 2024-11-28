@@ -31,6 +31,23 @@ jobs:
         echo "Listing all files and paths in the repository:"
         find . -type f
 
+    - name: Check held packages
+      run: |
+        sudo apt-mark showhold
+
+    - name: Clean up apt cache
+      run: |
+        sudo apt-get clean
+        sudo apt-get update
+
+    - name: Fix broken packages
+      run: |
+        sudo apt-get install -f
+
+    - name: Remove conflicting Docker packages
+      run: |
+        sudo apt-get remove --purge -y docker docker-engine docker.io containerd containerd.io
+
     - name: Install Docker
       run: |
         sudo apt-get update
