@@ -76,4 +76,53 @@ jobs:
       run: |
           pytest --html=report.html --self-contained-html > pytest_test_results.log || exit 0
           cat pytest_test_results.log 
+
+    - name: Check if tests passed or failed
+      run: |
+        if grep -q "FAILED" pytest_test_results.log; then
+          echo "Tests failed"
+          echo "TESTS_PASSED=false" >> $GITHUB_ENV
+        else
+          echo "Tests passed"
+          echo "TESTS_PASSED=true" >> $GITHUB_ENV
+        fi
+
+    - name: Archive Pytest Results
+      uses: actions/upload-artifact@v3
+      with:
+        name: pytest-results
+        path: pytest_test_results.log
+
+    - name: Archive HTML Test Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: selenium-test-report
+        path: report.html
+
+    - name: Archive Pytest Results (with check)
+      run: |
+        if [ -f "pytest_test_results.log" ]; then
+          echo "Pytest results archived"
+        else
+          echo "Failed to archive Pytest results"
+          exit 1
+        fi
+
+    - name: Archive HTML Test Report (with check)
+      run: |
+        if [ -f "report.html" ]; then
+          echo "HTML test report archived"
+        else
+          echo "Failed to archive HTML test report"
+          exit 1
+        fi
+
+    - name: Send Email Notification
+      run: |
+          python send_email_notification.py ${{ steps.test_run.outcome }}
+      env:
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}  # Store sender email in GitHub secrets
+          SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}  # Store sender password in GitHub secrets
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}  # Store recipient email in GitHub secrets
+      
    
