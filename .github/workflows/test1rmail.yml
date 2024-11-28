@@ -73,7 +73,7 @@ jobs:
 
     - name: Run Tests
       run: |
-        pytest --db mongodb://localhost:27017/sampleupload
+        pytest  # Remove --db if not required
 
     - name: Shut Down Docker Compose
       if: always()
