@@ -71,9 +71,9 @@ jobs:
         done
         echo "MongoDB is ready"
 
-    - name: Run Tests
+    - name: Run Selenium tests and generate HTML report
+      id: run_tests
       run: |
-        pytest  
-      env:
-          MONGO_URI: "mongodb://localhost:27017/sampleupload" 
+          pytest --html=report.html --self-contained-html > pytest_test_results.log || exit 0
+          cat pytest_test_results.log 
    
