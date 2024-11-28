@@ -27,13 +27,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: List all files and paths
-      run: |
-        echo "Listing all files and paths in the repository:"
-        find . -type f
+   
 
-        - name: Set up Docker Compose
-        run: |
+    - name: Set up Docker Compose
+      run: |
           docker-compose up -d
   
     - name: Wait for MongoDB to be ready
