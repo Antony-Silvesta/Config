@@ -5,14 +5,26 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 from homeobjects.test_login import LoginPage
-from configfile.config import MongoClient  # Assuming MongoClient is defined in config
+from pymongo import MongoClient  # <-- Import MongoClient from pymongo
+from urllib.parse import quote_plus
 
 # Fixture for MongoDB client connection
 @pytest.fixture(scope="module")
 def mongo_client():
-    client = MongoClient("mongodb://127.0.0.1:27017/")  # Update this URI as necessary
+    # MongoDB Atlas URI - replace with your actual credentials and cluster info
+    username = "yourUsername"  # Replace with your MongoDB Atlas username
+    password = "yourPassword"  # Replace with your MongoDB Atlas password
+    encoded_username = quote_plus(username)
+    encoded_password = quote_plus(password)
+    
+    # MongoDB Atlas URI format
+    atlas_uri = f"mongodb+srv://{encoded_username}:{encoded_password}@your-cluster-url.mongodb.net/sampleupload?retryWrites=true&w=majority"
+    
+    # Connect to MongoDB Atlas
+    client = MongoClient(atlas_uri)
     db = client["sampleupload"]  # Use your actual database name
     users_collection = db["users"]  # Use your actual collection name
+    
     yield users_collection
     client.close()  # Close the MongoDB client connection
     print("MongoDB client connection closed.")

@@ -4,8 +4,9 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from homeobjects.test_login import LoginPage
-from configfile.config import MongoClient
 import logging
+from pymongo import MongoClient  # <-- Import MongoClient 
+from urllib.parse import quote_plus
 
 # Set up logger
 logging.basicConfig(level=logging.DEBUG)
@@ -28,13 +29,24 @@ def setup_driver():
     driver.quit()
     logger.info("Browser closed.")
 
-# Fixture for fetching invalid users from MongoDB
+# Fixture for fetching invalid users from MongoDB Atlas
 @pytest.fixture(scope="class")
 def invalid_users():
-    client = MongoClient("mongodb://127.0.0.1:27017/")  # Update this URI as necessary
-    db = client["sampleupload"]  # Use your actual database name
+    # MongoDB Atlas URI, replace with actual username, password, cluster URL, and database name
+    username = "dbUser"
+    password = "P@ssw0rd123"
+    
+    # URL encode the username and password if they contain special characters
+    encoded_username = quote_plus(username)
+    encoded_password = quote_plus(password)
+    
+    # MongoDB Atlas connection string
+    atlas_uri = f"mongodb+srv://{encoded_username}:{encoded_password}@cluster0.jdala.mongodb.net/sampletest?retryWrites=true&w=majority"
+    
+    client = MongoClient(atlas_uri)  # MongoDB Atlas URI for connection
+    db = client["sampletest"]  # Use your actual database name
     users_collection = db["users"]  # Use your actual collection name
-    logger.info("Connected to MongoDB and fetched users collection.")
+    logger.info("Connected to MongoDB Atlas and fetched users collection.")
 
     # Fetch users with invalid details
     invalid_user_details = list(users_collection.find({"is_valid": False}))
@@ -45,7 +57,7 @@ def invalid_users():
 
     yield invalid_user_details
     client.close()
-    logger.info("MongoDB client connection closed.")
+    logger.info("MongoDB Atlas client connection closed.")
 
 @pytest.mark.usefixtures("setup_driver")
 class TestInvalidLogin:
@@ -68,8 +80,6 @@ class TestInvalidLogin:
             expected_error = user_details["expected_error"]
 
             logger.info(f"Testing login for Username: '{username}' with Password: '{password}', Expected error: '{expected_error}'")
-
-           
 
             # Navigate to the base URL
             try:
