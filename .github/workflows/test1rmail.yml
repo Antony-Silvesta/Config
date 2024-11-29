@@ -1,4 +1,4 @@
-name: Selenium Tests
+name: Selenium Tests and MongoDB Info
 
 on:
   push:
@@ -9,101 +9,126 @@ on:
       - main
 
 jobs:
-  test:
+  test-and-mongo:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.8'
+      # Step 2: Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
 
-    - name: Set Environment Variables
-      run: |
-   
-        echo "MONGO_URI=mongodb://127.0.0.1:27017/sampleupload" >> $GITHUB_ENV
+      # Step 3: Set Environment Variables
+      - name: Set Environment Variables
+        run: |
+          echo "MONGO_URI=mongodb://127.0.0.1:27017/sampleupload" >> $GITHUB_ENV
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      # Step 4: Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-    - name: List all files and paths
-      run: |
-        find . -type f
+      # Step 5: List all files and paths
+      - name: List all files and paths
+        run: |
+          find . -type f
 
-    - name: Clean up apt cache and fix issues
-      run: |
-        sudo apt-get clean
-        sudo apt-get update
-        sudo apt-get install -f
+      # Step 6: Clean up apt cache and fix issues
+      - name: Clean up apt cache and fix issues
+        run: |
+          sudo apt-get clean
+          sudo apt-get update
+          sudo apt-get install -f
 
-    - name: Install Docker and Docker Compose
-      run: |
-        sudo apt-get remove --purge -y docker docker-engine docker.io containerd containerd.io || true
-        sudo apt-get install -y docker.io
-        sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
-        docker-compose --version
+      # Step 7: Install Docker and Docker Compose
+      - name: Install Docker and Docker Compose
+        run: |
+          sudo apt-get remove --purge -y docker docker-engine docker.io containerd containerd.io || true
+          sudo apt-get install -y docker.io
+          sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
 
-    - name: Set up Docker Compose
-      run: |
-        docker-compose up -d
+      # Step 8: Set up Docker Compose
+      - name: Start MongoDB using Docker Compose
+        run: docker-compose up -d
 
-    - name: Wait for MongoDB to be ready
-      run: |
-        until nc -z localhost 27017; do
-          echo "Waiting for MongoDB to start..."
-          sleep 1
-        done
-        echo "MongoDB is ready"
+      # Step 9: Wait for MongoDB to be ready
+      - name: Wait for MongoDB to be ready
+        run: |
+          until nc -z localhost 27017; do
+            echo "Waiting for MongoDB to start..."
+            sleep 1
+          done
+          echo "MongoDB is ready"
 
-    - name: Run Selenium tests and generate HTML report
-      id: run_tests
-      run: |
-        pytest --html=report.html --self-contained-html > pytest_test_results.log || true
-        cat pytest_test_results.log
+      # Step 10: Show MongoDB Databases and Collections
+      - name: Show MongoDB Databases and Collections
+        run: |
+          # List databases
+          echo "Listing databases in MongoDB:"
+          docker exec -it config_mongodb_1 mongosh --eval "show dbs"
+          
+          # Switch to a database and list collections (replace 'your_database_name' as needed)
+          DATABASE_NAME="sampleupload"
+          echo "Listing collections in database '$DATABASE_NAME':"
+          docker exec -it config_mongodb_1 mongosh --eval "use $DATABASE_NAME; show collections"
 
-    - name: Check if tests passed
-      id: check_results
-      run: |
-        if grep -q "FAILED" pytest_test_results.log; then
-          echo "Tests failed"
-          echo "TESTS_PASSED=false" >> $GITHUB_ENV
-        else
-          echo "Tests passed"
-          echo "TESTS_PASSED=true" >> $GITHUB_ENV
-        fi
+      # Step 11: Run Selenium tests and generate HTML report
+      - name: Run Selenium tests and generate HTML report
+        id: run_tests
+        run: |
+          pytest --html=report.html --self-contained-html > pytest_test_results.log || true
+          cat pytest_test_results.log
 
-    - name: Archive Pytest Results
-      uses: actions/upload-artifact@v3
-      with:
-        name: pytest-results
-        path: pytest_test_results.log
+      # Step 12: Check if tests passed
+      - name: Check if tests passed
+        id: check_results
+        run: |
+          if grep -q "FAILED" pytest_test_results.log; then
+            echo "Tests failed"
+            echo "TESTS_PASSED=false" >> $GITHUB_ENV
+          else
+            echo "Tests passed"
+            echo "TESTS_PASSED=true" >> $GITHUB_ENV
+          fi
 
-    - name: Archive HTML Test Report
-      uses: actions/upload-artifact@v3
-      with:
-        name: selenium-test-report
-        path: report.html
+      # Step 13: Archive Pytest Results
+      - name: Archive Pytest Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: pytest-results
+          path: pytest_test_results.log
 
-    - name: Send Email Notification on Failure
-      if: env.TESTS_PASSED == 'false'
-      run: |
-        python send_email_notification.py "Tests failed"
-      env:
-        SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
-        SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
-        RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+      # Step 14: Archive HTML Test Report
+      - name: Archive HTML Test Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: selenium-test-report
+          path: report.html
 
-    - name: Send Email Notification on Success
-      if: env.TESTS_PASSED == 'true'
-      run: |
-        python send_email_notification.py "Tests passed"
-      env:
-        SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
-        SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
-        RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+      # Step 15: Send Email Notification on Failure
+      - name: Send Email Notification on Failure
+        if: env.TESTS_PASSED == 'false'
+        run: |
+          python send_email_notification.py "Tests failed"
+        env:
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+
+      # Step 16: Send Email Notification on Success
+      - name: Send Email Notification on Success
+        if: env.TESTS_PASSED == 'true'
+        run: |
+          python send_email_notification.py "Tests passed"
+        env:
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
