@@ -60,6 +60,8 @@ jobs:
       id: run_tests
       run: |
         pytest --html=report.html --self-contained-html > pytest_test_results.log || true
+        cat pytest_test_results.log
+
 
     - name: Check if tests passed
       id: check_results
