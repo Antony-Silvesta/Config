@@ -21,8 +21,10 @@ jobs:
       with:
         python-version: '3.8'
 
-    - name: Print environment variables
-      run: printenv
+    - name: Set Environment Variables
+      run: |
+   
+        echo "MONGO_URI=mongodb://127.0.0.1:27017/sampleupload" >> $GITHUB_ENV
 
     - name: Install dependencies
       run: |
