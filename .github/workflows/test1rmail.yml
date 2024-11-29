@@ -71,9 +71,11 @@ jobs:
       # Step 10: Show MongoDB Databases and Collections
       - name: Show MongoDB Databases and Collections
         run: |
-          # List databases
           echo "Listing databases in MongoDB:"
-          docker exec -it config_mongodb_1 mongosh --eval "show dbs"
+          docker exec mongodb mongosh --eval "show dbs"
+
+          echo "Switching to 'sampleupload' database and listing collections:"
+          docker exec mongodb mongosh --eval "use sampleupload; show collections"
           
 
       # Step 11: Run Selenium tests and generate HTML report
