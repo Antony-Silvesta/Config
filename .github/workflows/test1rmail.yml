@@ -75,10 +75,6 @@ jobs:
           echo "Listing databases in MongoDB:"
           docker exec -it config_mongodb_1 mongosh --eval "show dbs"
           
-          # Switch to a database and list collections (replace 'your_database_name' as needed)
-          DATABASE_NAME="sampleupload"
-          echo "Listing collections in database '$DATABASE_NAME':"
-          docker exec -it config_mongodb_1 mongosh --eval "use $DATABASE_NAME; show collections"
 
       # Step 11: Run Selenium tests and generate HTML report
       - name: Run Selenium tests and generate HTML report
