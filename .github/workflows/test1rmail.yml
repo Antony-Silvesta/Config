@@ -21,6 +21,9 @@ jobs:
       with:
         python-version: '3.8'
 
+    - name: Print environment variables
+      run: printenv
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -61,7 +64,6 @@ jobs:
       run: |
         pytest --html=report.html --self-contained-html > pytest_test_results.log || true
         cat pytest_test_results.log
-
 
     - name: Check if tests passed
       id: check_results
