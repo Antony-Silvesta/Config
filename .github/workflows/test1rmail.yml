@@ -69,13 +69,19 @@ jobs:
           echo "MongoDB is ready"
 
       # Step 10: Show MongoDB Databases and Collections
+      # Step 5: Get MongoDB Container Name
+      - name: Get MongoDB Container Name
+        id: get_container
+        run: echo "CONTAINER_NAME=$(docker ps --filter 'ancestor=mongo:4.4' --format '{{.Names}}')" >> $GITHUB_ENV
+
+      # Step 6: Show MongoDB Databases and Collections
       - name: Show MongoDB Databases and Collections
         run: |
           echo "Listing databases in MongoDB:"
-          docker exec mongodb mongosh --eval "show dbs"
+          docker exec $CONTAINER_NAME mongosh --eval "show dbs"
 
           echo "Switching to 'sampleupload' database and listing collections:"
-          docker exec mongodb mongosh --eval "use sampleupload; show collections"
+          docker exec $CONTAINER_NAME mongosh --eval "use sampleupload; show collections"
           
 
       # Step 11: Run Selenium tests and generate HTML report
