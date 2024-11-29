@@ -28,36 +28,21 @@ jobs:
 
     - name: List all files and paths
       run: |
-        echo "Listing all files and paths in the repository:"
         find . -type f
 
-    - name: Check held packages
-      run: |
-        sudo apt-mark showhold
-
-    - name: Clean up apt cache
+    - name: Clean up apt cache and fix issues
       run: |
         sudo apt-get clean
         sudo apt-get update
-
-    - name: Fix broken packages
-      run: |
         sudo apt-get install -f
 
-    - name: Remove conflicting Docker packages
+    - name: Install Docker and Docker Compose
       run: |
-        sudo apt-get remove --purge -y docker docker-engine docker.io containerd containerd.io
-
-    - name: Install Docker
-      run: |
-        sudo apt-get update
+        sudo apt-get remove --purge -y docker docker-engine docker.io containerd containerd.io || true
         sudo apt-get install -y docker.io
-
-    - name: Install Docker Compose
-      run: |
         sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
-        docker-compose --version  # Verify Docker Compose installation
+        docker-compose --version
 
     - name: Set up Docker Compose
       run: |
@@ -74,10 +59,10 @@ jobs:
     - name: Run Selenium tests and generate HTML report
       id: run_tests
       run: |
-          pytest --html=report.html --self-contained-html > pytest_test_results.log || exit 0
-          cat pytest_test_results.log 
+        pytest --html=report.html --self-contained-html > pytest_test_results.log || true
 
-    - name: Check if tests passed or failed
+    - name: Check if tests passed
+      id: check_results
       run: |
         if grep -q "FAILED" pytest_test_results.log; then
           echo "Tests failed"
@@ -99,30 +84,20 @@ jobs:
         name: selenium-test-report
         path: report.html
 
-    - name: Archive Pytest Results (with check)
+    - name: Send Email Notification on Failure
+      if: env.TESTS_PASSED == 'false'
       run: |
-        if [ -f "pytest_test_results.log" ]; then
-          echo "Pytest results archived"
-        else
-          echo "Failed to archive Pytest results"
-          exit 1
-        fi
-
-    - name: Archive HTML Test Report (with check)
-      run: |
-        if [ -f "report.html" ]; then
-          echo "HTML test report archived"
-        else
-          echo "Failed to archive HTML test report"
-          exit 1
-        fi
-
-    - name: Send Email Notification
-      run: |
-          python send_email_notification.py ${{ steps.test_run.outcome }}
+        python send_email_notification.py "Tests failed"
       env:
-          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}  # Store sender email in GitHub secrets
-          SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}  # Store sender password in GitHub secrets
-          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}  # Store recipient email in GitHub secrets
-      
-   
+        SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+        SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+        RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+
+    - name: Send Email Notification on Success
+      if: env.TESTS_PASSED == 'true'
+      run: |
+        python send_email_notification.py "Tests passed"
+      env:
+        SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+        SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+        RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
