@@ -23,13 +23,4 @@ def add_selenium_log(request):
         for entry in driver.get_log('browser'):
             request.node.user_properties.append(("browser_log", entry))
 
-# Hook for adding the --db command-line option to pytest
-def pytest_addoption(parser):
-    parser.addoption(
-        "--db", action="store", default="sampleupload", help="Database to use (default: sampleupload)"
-    )
 
-# Fixture to access the --db option
-@pytest.fixture
-def db(request):
-    return request.config.getoption("--db")
