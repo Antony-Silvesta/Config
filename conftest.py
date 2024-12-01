@@ -7,7 +7,7 @@ def driver():
     yield driver
     driver.quit()
 def test_example(driver):
-    driver.get("https://example.com")
+    driver.get("https://demo.filebrowser.org") 
     assert "Example Domain" in driver.title
 
 import pytest
@@ -30,5 +30,4 @@ def add_selenium_log(request):
     if driver:
         # Adding browser logs to report
         for entry in driver.get_log('browser'):
-            request.node.user_properties.append(("browser_log", entry))
-
+            request.node.user_properties.append(("browser_log", entry))   
