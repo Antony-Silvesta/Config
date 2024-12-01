@@ -36,7 +36,7 @@ jobs:
 
     - name: Set Environment Variables
       run: |
-        echo "PYTHONPATH=$PWD/login_testcases/homeobjects:$PWD/Config/usertestfile/test_users.py" >> $GITHUB_ENV
+        echo "PYTHONPATH=$PWD/login_testcases/homeobjects:$PWD/Config/testuserfile/test_users.py" >> $GITHUB_ENV
         echo "MONGO_URI=mongodb://127.0.0.1:27017/sampleupload" >> $GITHUB_ENV
 
     - name: Wait for MongoDB to be ready
@@ -49,7 +49,7 @@ jobs:
 
     - name: Configure MongoDB Test Data
       run: |
-        python usertestfile/test_users.py
+        python testuserfile/test_users.py
 
     - name: Set up ChromeDriver and Chrome
       uses: browser-actions/setup-chrome@v1
