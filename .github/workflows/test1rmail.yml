@@ -1,15 +1,20 @@
-name: Selenium Tests
+name: Selenium Tests 
+
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:4.4
+        ports:
+          - 27017:27017
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -24,49 +29,43 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: List all files in the repository
-      run: find . -type f
-
-    - name: Clean and Update APT
+    - name: List all files and paths
       run: |
-        sudo apt-get clean
-        sudo apt-get update
+        echo "Listing all files and paths in the repository:"
+        find . -type f
 
-    - name: Fix broken packages and remove conflicting Docker packages
+    - name: Set Environment Variables
       run: |
-        sudo apt-get install -f -y
-        sudo apt-get remove --purge -y docker docker-engine docker.io containerd containerd.io || true
-
-    - name: Install Docker
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y docker.io
-
-    - name: Install Docker Compose
-      run: |
-        sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
-        docker-compose --version
-
-    - name: Set up Docker Compose
-      run: docker-compose up -d
+        echo "PYTHONPATH=$PWD/login_testcases/homeobjects:$PWD/Config/usertestfile/test_users.py" >> $GITHUB_ENV
+        echo "MONGO_URI=mongodb://127.0.0.1:27017/sampleupload" >> $GITHUB_ENV
 
     - name: Wait for MongoDB to be ready
       run: |
-        until nc -z localhost 27017; do
+        until nc -zv localhost 27017; do
           echo "Waiting for MongoDB to start..."
           sleep 1
         done
         echo "MongoDB is ready"
 
+    - name: Configure MongoDB Test Data
+      run: |
+        python usertestfile/test_users.py
+
+    - name: Set up ChromeDriver and Chrome
+      uses: browser-actions/setup-chrome@v1
+      with:
+        chrome-version: 'latest'
+
+    - name: Set Timezone to India Standard Time (IST)
+      run: sudo timedatectl set-timezone Asia/Kolkata
+
     - name: Run Selenium tests and generate HTML report
       id: run_tests
       run: |
-        pytest --html=report.html --self-contained-html > pytest_test_results.log || true
+        pytest --html=report.html --self-contained-html > pytest_test_results.log || exit 0
         cat pytest_test_results.log
 
     - name: Check if tests passed or failed
-      id: check_tests
       run: |
         if grep -q "FAILED" pytest_test_results.log; then
           echo "Tests failed"
@@ -77,24 +76,40 @@ jobs:
         fi
 
     - name: Archive Pytest Results
-      if: always()
       uses: actions/upload-artifact@v3
       with:
         name: pytest-results
         path: pytest_test_results.log
 
     - name: Archive HTML Test Report
-      if: always()
       uses: actions/upload-artifact@v3
       with:
         name: selenium-test-report
         path: report.html
 
-    - name: Send Email Notification on Test Failure
-      if: env.TESTS_PASSED == 'false'
+    - name: Archive Pytest Results (with check)
       run: |
-        python send_email_notification.py "failure"
+        if [ -f "pytest_test_results.log" ]; then
+          echo "Pytest results archived"
+        else
+          echo "Failed to archive Pytest results"
+          exit 1
+        fi
+
+    - name: Archive HTML Test Report (with check)
+      run: |
+        if [ -f "report.html" ]; then
+          echo "HTML test report archived"
+        else
+          echo "Failed to archive HTML test report"
+          exit 1
+        fi
+
+    - name: Send Email Notification
+      run: |
+          python send_email_notification.py ${{ steps.test_run.outcome }}
       env:
-        SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
-        SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
-        RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}  # Store sender email in GitHub secrets
+          SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}  # Store sender password in GitHub secrets
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}  # Store recipient email in GitHub secrets
+      
