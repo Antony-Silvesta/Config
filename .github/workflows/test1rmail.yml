@@ -66,6 +66,7 @@ jobs:
         cat pytest_test_results.log
 
     - name: Check if tests passed or failed
+      id: check_tests
       run: |
         if grep -q "FAILED" pytest_test_results.log; then
           echo "Tests failed"
@@ -76,18 +77,20 @@ jobs:
         fi
 
     - name: Archive Pytest Results
+      if: always()
       uses: actions/upload-artifact@v3
       with:
         name: pytest-results
         path: pytest_test_results.log
 
     - name: Archive HTML Test Report
+      if: always()
       uses: actions/upload-artifact@v3
       with:
         name: selenium-test-report
         path: report.html
 
-    - name: Send Email Notification
+    - name: Send Email Notification on Test Failure
       if: env.TESTS_PASSED == 'false'
       run: |
         python send_email_notification.py "failure"
