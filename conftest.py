@@ -14,13 +14,11 @@ def pytest_runtest_makereport(item, call):
             extra.append(pytest_html.extras.image(screenshot_path))
             item.extra = extra
 
-# Fixture for adding browser logs to report
+# Fixture for adding browser logs to the report
 @pytest.fixture(autouse=True)
 def add_selenium_log(request):
     driver = request.node.funcargs.get("driver")
     if driver:
-        # Adding browser logs to report
+        # Adding browser logs to the report
         for entry in driver.get_log('browser'):
             request.node.user_properties.append(("browser_log", entry))
-
-
