@@ -1,5 +1,16 @@
 import pytest
+from selenium import webdriver
+# Define a fixture for the Selenium WebDriver
+@pytest.fixture
+def driver():
+    driver = webdriver.Chrome()
+    yield driver
+    driver.quit()
+def test_example(driver):
+    driver.get("https://example.com")
+    assert "Example Domain" in driver.title
 
+import pytest
 # Hook for adding additional information in the HTML report
 @pytest.hookimpl(tryfirst=True)
 def pytest_runtest_makereport(item, call):
@@ -13,12 +24,11 @@ def pytest_runtest_makereport(item, call):
             extra = getattr(item, 'extra', [])
             extra.append(pytest_html.extras.image(screenshot_path))
             item.extra = extra
-
-# Fixture for adding browser logs to the report
 @pytest.fixture(autouse=True)
 def add_selenium_log(request):
     driver = request.node.funcargs.get("driver")
     if driver:
-        # Adding browser logs to the report
+        # Adding browser logs to report
         for entry in driver.get_log('browser'):
             request.node.user_properties.append(("browser_log", entry))
+
