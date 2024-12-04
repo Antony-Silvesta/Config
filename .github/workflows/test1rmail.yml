@@ -46,8 +46,7 @@ jobs:
           done
           echo "MongoDB is ready"
 
-      - name: Seed MongoDB Test Data
-        run: python app/seed.py
+      
 
       - name: Test MongoDB integration
         run: python app/app.py
