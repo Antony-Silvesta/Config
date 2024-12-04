@@ -1,49 +1,91 @@
-name: MongoDB Direct Integration Pipeline
+name: MongoDB and Selenium Integration Pipeline
 
 on:
   push:
-    branches:
-      - main  # Trigger the pipeline on a push to the main branch
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-  mongodb-integration:
+  mongodb-integration-tests:
     runs-on: ubuntu-latest
 
     services:
       mongodb:
-        image: mongo:latest
+        image: mongo:5.0
         ports:
           - 27017:27017
 
-    env:  # Environment variables for MongoDB connection
-      MONGO_URI: "mongodb://localhost:27017/" # MongoDB connection URI stored securely in GitHub Secrets
-      MONGO_DB: "my_database"             # Database name
+    env:
+      MONGO_URI: "mongodb://localhost:27017/"  # MongoDB URI
+      MONGO_DB: "my_database"                  # Database name
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3  # Checkout your repository code
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'  # Specify the Python version
+          python-version: '3.9'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pymongo python-dotenv
           pip install -r requirements.txt
+          pip install pytest pytest-html pymongo selenium
 
-      - name: Run Python script
+      - name: List all files
+        run: find . -type f
+
+      - name: Wait for MongoDB to be ready
+        run: |
+          until nc -zv localhost 27017; do
+            echo "Waiting for MongoDB to start..."
+            sleep 1
+          done
+          echo "MongoDB is ready"
+
+      - name: Seed MongoDB Test Data
         run: python app/seed.py
 
-        
-      - name: Test listing entries
+      - name: Test MongoDB integration
         run: python app/app.py
 
-      - name: Run Selenium tests and generate HTML report
-        id: run_tests
+      - name: Set Timezone to IST
+        run: sudo timedatectl set-timezone Asia/Kolkata
+
+      - name: Set up ChromeDriver and Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: 'latest'
+
+      - name: Run Selenium tests and generate report
+        id: selenium_tests
         run: |
-             pytest --html=report.html --self-contained-html > pytest_test_results.log || true
-             cat pytest_test_results.log
-   
+          pytest --html=selenium-report.html --self-contained-html > selenium_results.log || true
+          cat selenium_results.log
+
+      - name: Check if Selenium tests passed or failed
+        run: |
+          if grep -q "FAILED" selenium_results.log; then
+            echo "Tests failed"
+            echo "TESTS_PASSED=false" >> $GITHUB_ENV
+          else
+            echo "Tests passed"
+            echo "TESTS_PASSED=true" >> $GITHUB_ENV
+          fi
+
+      - name: Archive Selenium HTML Test Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: selenium-html-report
+          path: selenium-report.html
+
+      - name: Archive Selenium Test Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: selenium-results
+          path: selenium_results.log
+
+      
