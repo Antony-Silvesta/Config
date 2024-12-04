@@ -31,7 +31,7 @@ def setup_driver():
 # Fixture for fetching invalid users from MongoDB
 @pytest.fixture(scope="class")
 def invalid_users():
-    client = MongoClient("mongodb://127.0.0.1:27017/")  # Update this URI as necessary
+    client = MongoClient("mongodb://localhost:27017/")  # Update this URI as necessary
     db = client["sampleupload"]  # Use your actual database name
     users_collection = db["users"]  # Use your actual collection name
     logger.info("Connected to MongoDB and fetched users collection.")

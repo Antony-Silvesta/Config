@@ -11,7 +11,7 @@ from pymongo import MongoClient
 # Fixture for MongoDB client connection
 @pytest.fixture(scope="module")
 def mongo_client():
-    client = MongoClient("mongodb://127.0.0.1:27017/")  # Update this URI as necessary
+    client = MongoClient("mongodb://localhost:27017/")  # Update this URI as necessary
     db = client["sampleupload"]  # Use your actual database name
     users_collection = db["users"]  # Use your actual collection name
     yield users_collection

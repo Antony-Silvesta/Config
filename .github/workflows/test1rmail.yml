@@ -1,106 +1,48 @@
-name: Selenium Tests
+name: MongoDB Direct Integration Pipeline
+
 on:
   push:
     branches:
-      - main
-  pull_request:
-    branches:
-      - main
+      - main  # Trigger the pipeline on a push to the main branch
+
 jobs:
-  test:
+  mongodb-integration:
     runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
+
+    env:  # Environment variables for MongoDB connection
+      MONGO_URI: "mongodb://localhost:27017/" # MongoDB connection URI stored securely in GitHub Secrets
+      MONGO_DB: "my_database"             # Database name
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.8'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    - name: List all files in the repository
-      run: find . -type f
-    - name: Clean and Update APT
-      run: |
-        sudo apt-get clean
-        sudo apt-get update
-    - name: Fix broken packages and remove conflicting Docker packages
-      run: |
-        sudo apt-get install -f -y
-        sudo apt-get remove --purge -y docker docker-engine docker.io containerd containerd.io || true
-    - name: Install Docker
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y docker.io
-    - name: Install Docker Compose
-      run: |
-        sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
-        docker-compose --version
-    - name: Set up Docker Compose
-      run: docker-compose up -d
-    - name: Wait for MongoDB to be ready
-      run: |
-        until nc -z localhost 27017; do
-          echo "Waiting for MongoDB to start..."
-          sleep 1
-        done
-        echo "MongoDB is ready"
-    - name: Run Selenium tests and generate HTML report
-      id: run_tests
-      run: |
-        pytest --html=report.html --self-contained-html > pytest_test_results.log || true
-        cat pytest_test_results.log
-    - name: Check if tests passed or failed
-      id: check_tests
-      run: |
-        if grep -q "FAILED" pytest_test_results.log; then
-          echo "Tests failed"
-          echo "TESTS_PASSED=false" >> $GITHUB_ENV
-        else
-          echo "Tests passed"
-          echo "TESTS_PASSED=true" >> $GITHUB_ENV
-        fi
-    - name: Archive Pytest Results
-      if: always()
-      uses: actions/upload-artifact@v3
-      with:
-        name: pytest-results
-        path: pytest_test_results.log
-    - name: Archive HTML Test Report
-      if: always()
-      uses: actions/upload-artifact@v3
-      with:
-        name: selenium-test-report
-        path: report.html
-    - name: Send Email Notification on Test Failure
-      if: env.TESTS_PASSED == 'false'
-      run: |
-        python send_email_notification.py "failure"
-      env:
-        SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
-        SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
-        RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+      - name: Checkout repository
+        uses: actions/checkout@v3  # Checkout your repository code
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'  # Specify the Python version
 
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pymongo python-dotenv
 
+      - name: Run Python script
+        run: python app/seed.py
 
+        
+      - name: Test listing entries
+        run: python app/app.py
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      - name: Run Selenium tests and generate HTML report
+        id: run_tests
+        run: |
+             pytest --html=report.html --self-contained-html > pytest_test_results.log || true
+             cat pytest_test_results.log
+   
