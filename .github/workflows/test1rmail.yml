@@ -17,7 +17,7 @@ jobs:
 
     env:
       MONGO_URI: "mongodb://localhost:27017/"  # MongoDB URI
-      MONGO_DB: "my_database"                  # Database name
+      MONGO_DB: "sampleupload"                  # Database name
 
     steps:
       - name: Checkout code
