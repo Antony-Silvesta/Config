@@ -9,7 +9,6 @@ on:
 jobs:
   mongodb-integration-tests:
     runs-on: ubuntu-latest
-
     services:
       mongodb:
         image: mongo:5.0
@@ -48,8 +47,14 @@ jobs:
 
       
 
-      - name: Test MongoDB integration
+      
+
+      - name: Seed MongoDB
+        run: python app/seed.py
+
+      - name: Test listing entries
         run: python app/app.py
+        
 
       - name: Set Timezone to IST
         run: sudo timedatectl set-timezone Asia/Kolkata
@@ -65,26 +70,5 @@ jobs:
           pytest --html=selenium-report.html --self-contained-html > selenium_results.log || true
           cat selenium_results.log
 
-      - name: Check if Selenium tests passed or failed
-        run: |
-          if grep -q "FAILED" selenium_results.log; then
-            echo "Tests failed"
-            echo "TESTS_PASSED=false" >> $GITHUB_ENV
-          else
-            echo "Tests passed"
-            echo "TESTS_PASSED=true" >> $GITHUB_ENV
-          fi
-
-      - name: Archive Selenium HTML Test Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: selenium-html-report
-          path: selenium-report.html
-
-      - name: Archive Selenium Test Results
-        uses: actions/upload-artifact@v3
-        with:
-          name: selenium-results
-          path: selenium_results.log
 
       
